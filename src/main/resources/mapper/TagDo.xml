@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.happymeal.cblog.data.dos.TagDo">
+    <select id="selectAllTags"
+            resultType="co.happymeal.cblog.pojo.Tag">
+        SELECT * FROM tag t
+            left join  (SELECT count(1) num, tid FROM tag_comic GROUP BY tid) n ON t.id = n.tid
+    </select>
+
+    <select id="selectNoTagNum"
+            resultType="java.lang.Integer">
+        SELECT count(1) num FROM comic c
+            WHERE c.id NOT IN (SELECT cid FROM tag_comic GROUP BY cid)
+    </select>
+
+    <update id="updateTagCascade">
+        UPDATE `tag` SET `pid` = ( SELECT * FROM (
+            <if test="position == 'inner'">SELECT id FROM `tag` WHERE name = #{dropNode}</if>
+            <if test="position != 'inner'">SELECT pid FROM `tag` WHERE name = #{dropNode}</if>
+            )a) WHERE `name` = #{tagName}
+    </update>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id"
+            parameterType="co.happymeal.cblog.pojo.Tag">
+        INSERT INTO `tag`(`id`, `name`)
+            VALUES (#{id}, #{name});
+    </insert>
+
+    <insert id="insertTagComicPair">
+        INSERT INTO `tag_comic`(`tid`, `cid`)
+            VALUES (#{tid}, #{cid});
+    </insert>
+
+    <delete id="removeAllTagPairByComicId">
+        DELETE FROM `tag_comic` WHERE `cid` = #{cid};
+    </delete>
+
+    <delete id="removeAllTagsByTagId" parameterType="java.lang.Integer">
+        DELETE FROM `tag` WHERE `id` IN
+        <foreach collection="list" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>;
+    </delete>
+
+    <delete id="removeAllTagComicPairByTagId" parameterType="java.lang.Integer">
+        DELETE FROM `tag_comic` WHERE `tid` IN
+        <foreach collection="list" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>;
+    </delete>
+
+    <update id="removePidByTagId" parameterType="java.lang.Integer">
+        UPDATE `tag` SET pid = '' WHERE `pid` IN
+        <foreach collection="list" item="id" index="index" open="(" close=")" separator=",">
+            #{id}
+        </foreach>;
+    </update>
+
+    <delete id="removeUselessTag">
+        DELETE FROM `tag` WHERE `id` NOT IN (SELECT `tid` FROM `tag_comic` GROUP BY `tid`)
+    </delete>
+
+    <select id="selectByPid" resultMap="tagWithChildren">
+        SELECT * FROM `tag` WHERE `pid` = #{pid}
+    </select>
+
+    <resultMap id="tagWithChildren" type="co.happymeal.cblog.pojo.Tag">
+        <id column="id" property="id" />
+        <result column="name" property="name" />
+        <collection property="childrenList" ofType="co.happymeal.cblog.pojo.Tag" select="selectByPid" column="id" />
+    </resultMap>
+    
+    <select id="selectTagsWithChildren" resultMap="tagWithChildren">
+        SELECT * FROM `tag` WHERE `pid` IS NULL
+    </select>
+
+</mapper>

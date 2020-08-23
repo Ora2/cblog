@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.happymeal.cblog.data.dos.ComicDo">
+    <select id="selectByPage"
+            resultType="co.happymeal.cblog.pojo.Comic">
+        SELECT * FROM comic
+        <if test="tagIds != null and tagIds.size() != 0">
+            WHERE `id` in (
+                SELECT cid FROM (SELECT cid, count(1) c FROM tag_comic t WHERE t.`tid` IN
+                    <foreach collection="tagIds" item="id" index="index" open="(" close=")" separator=",">
+                        #{id}
+                    </foreach> GROUP BY cid) a WHERE a.c = ${tagIds.size()}
+            )
+        </if>
+        <if test="tagIds == null or tagIds.size() == 0">
+            WHERE `id` NOT IN (SELECT cid FROM tag_comic t GROUP BY cid)
+        </if>
+        ORDER BY rate DESC, id DESC limit #{start} , #{nums}
+    </select>
+
+    <select id="selectByPageWithAllTag" resultType="co.happymeal.cblog.pojo.Comic">
+        SELECT * FROM comic WHERE id IN (SELECT cid FROM tag_comic GROUP BY cid)
+        ORDER BY rate DESC, id DESC limit #{start} , #{nums}
+    </select>
+
+    <select id="selectByPageWithSearchString" resultType="co.happymeal.cblog.pojo.Comic">
+        SELECT * FROM comic WHERE
+            <foreach collection="strings" item="name" index="index" open="" close="" separator=" OR ">
+                name LIKE concat('%', #{name}, '%')
+            </foreach>
+        ORDER BY rate DESC, id DESC limit #{start} , #{nums}
+    </select>
+
+    <select id="selectTagIds"
+                     parameterType="java.lang.Integer"
+                     resultType="java.lang.Integer">
+        SELECT tid FROM tag_comic WHERE cid = #{comicId};
+    </select>
+
+    <select id="selectAllAuthors"
+            resultType="java.lang.String">
+        SELECT author FROM comic GROUP BY author;
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id"
+            parameterType="co.happymeal.cblog.pojo.Comic">
+        INSERT INTO `comic`(`id`, `name`, `author`, `url`, `location`, `rate`, `date`)
+            VALUES (#{id}, #{name}, #{author}, #{url}, #{location}, #{rate}, #{date});
+    </insert>
+
+    <update id="update" parameterType="co.happymeal.cblog.pojo.Comic">
+        UPDATE `comic`
+        SET     `name` = #{name},
+                `author` = #{author},
+                `url` = #{url},
+                `location` = #{location},
+                `rate` = #{rate},
+                `date` = #{date}
+        WHERE `id` = #{id};
+    </update>
+
+    <select id="repairImg" resultType="co.happymeal.cblog.pojo.Comic">
+        select * from comic
+    </select>
+    <update id="repair" parameterType="co.happymeal.cblog.pojo.Comic">
+        update comic set url = #{url} where id = #{id}
+    </update>
+
+    <select id="selectAll"
+            resultType="java.lang.String">
+        SELECT url FROM comic
+    </select>
+
+    <delete id="remove" parameterType="co.happymeal.cblog.pojo.Comic">
+        DELETE FROM `comic` WHERE `id` = #{id}
+    </delete>
+
+    <select id="selectRelatedComicById" parameterType="java.lang.Integer"
+            resultType="co.happymeal.cblog.pojo.Comic">
+        SELECT * FROM `comic` WHERE `id` IN (SELECT `to` id FROM `comic_relation` WHERE `from` = #{id} UNION SELECT `from` id FROM `comic_relation` WHERE `to` = #{id})
+    </select>
+
+    <select id="selectRelatedIdsById" parameterType="java.lang.Integer"
+            resultType="java.lang.Integer">
+        SELECT `from` id FROM `comic_relation` where `to` = #{id} union SELECT `to` id From `comic_relation` where `from` = #{id}
+        <!--SELECT `to` FROM `comic_relation` WHERE `from` = #{id} -->
+    </select>
+
+    <select id="selectComicByLocation" parameterType="java.lang.String"
+            resultType="co.happymeal.cblog.pojo.Comic">
+        SELECT * FROM `comic` WHERE `location` = #{location}
+    </select>
+
+    <insert id="bindRalation">
+        INSERT INTO `comic_relation`(`from`, `to`) VALUES (#{from}, #{to});
+    </insert>
+
+    <delete id="removeRalation">
+        DELETE FROM `comic_relation` WHERE (`from` = #{from} AND `to` = #{to}) OR (`from` =  #{to} AND `to` = #{from})
+    </delete>
+
+    <select id="selectComicTotalNum" resultType="java.lang.Integer">
+        SELECT count(1) FROM `comic`
+    </select>
+
+    <delete id="removeAllRelationsByComicId" parameterType="co.happymeal.cblog.pojo.Comic">
+        DELETE FROM `comic_relation` WHERE `from` = #{id} OR `to` = #{id}
+    </delete>
+</mapper>

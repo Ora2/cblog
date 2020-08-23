@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="co.happymeal.cblog.data.dos.DfsInfoDo">
+
+    <insert id="insert" parameterType="co.happymeal.cblog.pojo.DfsInfo">
+        INSERT INTO fastdfs(type,date,url) VALUES (#{type},#{date},#{url})
+    </insert>
+
+    <delete id="deleteByUrl" parameterType="co.happymeal.cblog.pojo.DfsInfo">
+        DELETE FROM fastdfs WHERE url = #{url}
+    </delete>
+
+</mapper>
